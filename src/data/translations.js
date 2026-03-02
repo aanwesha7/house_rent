@@ -15,7 +15,7 @@ export const translations = {
         footerLinks: "Quick Links",
         footerRights: "© 2026 HomeHive. All rights reserved.",
         aboutUs: "About",
-        contactUs: "Contact Us",
+        contactUs: "Contact",
         termsAndConditions: "Terms & Conditions",
         privacyPolicy: "Privacy Policy",
         browseProperties: "Browse Properties",
