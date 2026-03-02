@@ -44,14 +44,6 @@ export default function AboutUs() {
 
                     {/* Left Form Side - Our Story & Features */}
                     <div className="flex-1 p-2 md:p-6 flex flex-col justify-center">
-                        <div className="mb-8">
-                            <h2 className="text-3xl font-bold text-white mb-4 tracking-wide">{language === 'en' ? 'Our Story' : 'हमारी कहानी'}</h2>
-                            <p className="text-gray-400 text-[15px] leading-relaxed mb-6">
-                                {language === 'en'
-                                    ? 'Founded in 2026, HomeHive started with a simple idea finding a home should be exciting, not exhausting. We built a platform that connects verified owners with genuine renters, eliminating the friction and anxiety traditionally associated with property rentals.'
-                                    : '2026 में स्थापित, होम-हाइव एक सरल विचार के साथ शुरू हुआ: घर खोजना रोमांचक होना चाहिए, थकाऊ नहीं। हमने एक ऐसा मंच बनाया जो सत्यापित मालिकों को वास्तविक किरायेदारों से जोड़ता है।'}
-                            </p>
-                        </div>
 
                         <div className="space-y-4 pt-2 border-t border-gray-800/60">
                             {[
