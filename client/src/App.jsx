@@ -8,7 +8,9 @@ import OwnerHome from './pages/OwnerHome';
 import AdminHome from './pages/AdminHome';
 import RenterHome from './pages/RenterHome';
 import SignUp from './pages/SignUp';
+import Login from './pages/Login';
 import AddProperty from './pages/AddProperty';
+import Profile from './pages/Profile';
 import AboutUs from './pages/AboutUs';
 import ContactUs from './pages/ContactUs';
 import TermsAndConditions from './pages/TermsAndConditions';
@@ -19,6 +21,7 @@ function App() {
         <BrowserRouter>
             <Routes>
                 <Route path="/signup" element={<SignUp />} />
+                <Route path="/login" element={<Login />} />
                 <Route path="/" element={<Layout />}>
                     <Route index element={<Home />} />
                     <Route path="properties" element={<AllProperties />} />
@@ -33,6 +36,7 @@ function App() {
                     <Route path="owner" element={<OwnerHome />} />
                     <Route path="owner/add-property" element={<AddProperty />} />
                     <Route path="admin" element={<AdminHome />} />
+                    <Route path="profile" element={<Profile />} />
                 </Route>
             </Routes>
         </BrowserRouter>

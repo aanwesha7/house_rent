@@ -1,20 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import useAppStore from '../../store/useAppStore';
-import { Moon, Sun, Bell, Globe, ArrowRight, Home } from 'lucide-react';
+import useAuthStore from '../../store/useAuthStore';
+import { Moon, Sun, Bell, Globe, ArrowRight, Home, User, Settings, LogOut, ChevronDown } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Link, useNavigate } from 'react-router-dom';
 import NotificationPanel from './NotificationPanel';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import { translations } from '../../data/translations';
 
 export default function Header() {
-    const { theme, toggleTheme, language, setLanguage, notifications, isAuthenticated, user, logout } = useAppStore();
+    const { theme, toggleTheme, language, setLanguage, notifications } = useAppStore();
+    const { user, isAuthenticated, logout } = useAuthStore();
     const unreadCount = notifications.filter(n => !n.read).length;
     const [showNotifs, setShowNotifs] = useState(false);
+    const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const navigate = useNavigate();
+    const profileMenuRef = useRef(null);
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -23,6 +27,23 @@ export default function Header() {
             setSearchQuery('');
         }
     };
+
+    const handleLogout = () => {
+        logout();
+        setShowProfileMenu(false);
+        navigate('/');
+    };
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
+                setShowProfileMenu(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const t = translations[language];
 
@@ -115,22 +136,85 @@ export default function Header() {
                     {/* User actions */}
                     <div className="hidden sm:flex ml-2 gap-2 border-l border-gray-800/60 pl-4 items-center">
                         {isAuthenticated ? (
-                            <>
-                                <Link to={user?.role === 'admin' ? '/admin' : user?.role === 'owner' ? '/owner' : '/renter'}>
-                                    <Button variant="outline" size="sm" className="border-gray-700/50 text-gray-300 hover:text-white hover:bg-purple-900/20 hover:border-purple-500/30">Dashboard</Button>
-                                </Link>
-                                <div className="flex items-center gap-2 ml-2 border-l pl-4 border-gray-800/60">
-                                    <div className="w-8 h-8 rounded-full bg-purple-900/30 border border-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-sm shadow-[0_0_10px_rgba(147,51,234,0.1)]">
-                                        {user?.name?.charAt(0) || 'U'}
+                            <div className="relative" ref={profileMenuRef}>
+                                <button
+                                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                                    className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-purple-900/20 transition-colors group"
+                                >
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 p-0.5">
+                                        <div className="w-full h-full rounded-full bg-[#1A1C26] flex items-center justify-center">
+                                            {user?.profileImage ? (
+                                                <img src={user.profileImage} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                                            ) : (
+                                                <span className="text-purple-400 font-bold text-sm">
+                                                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
-                                    <Button variant="ghost" size="sm" onClick={logout} className="text-red-400 hover:text-red-300 hover:bg-red-500/10">
-                                        Log Out
-                                    </Button>
-                                </div>
-                            </>
+                                    <ChevronDown className={`w-4 h-4 text-gray-400 group-hover:text-white transition-all ${showProfileMenu ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                <AnimatePresence>
+                                    {showProfileMenu && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="absolute right-0 mt-2 w-56 bg-[#15161E]/95 backdrop-blur-xl border border-gray-800/60 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] overflow-hidden z-50"
+                                        >
+                                            <div className="p-4 border-b border-gray-800/60">
+                                                <p className="text-white font-semibold">{user?.name || 'User'}</p>
+                                                <p className="text-gray-400 text-sm">{user?.email}</p>
+                                                <p className="text-purple-400 text-xs mt-1 capitalize">{user?.role || 'renter'}</p>
+                                            </div>
+                                            
+                                            <div className="py-2">
+                                                <Link
+                                                    to={user?.role === 'admin' ? '/admin' : user?.role === 'owner' ? '/owner' : '/renter'}
+                                                    onClick={() => setShowProfileMenu(false)}
+                                                    className="flex items-center gap-3 px-4 py-2.5 text-gray-300 hover:text-white hover:bg-purple-900/20 transition-colors"
+                                                >
+                                                    <Home className="w-4 h-4" />
+                                                    <span className="text-sm">Dashboard</span>
+                                                </Link>
+                                                
+                                                <Link
+                                                    to="/profile"
+                                                    onClick={() => setShowProfileMenu(false)}
+                                                    className="flex items-center gap-3 px-4 py-2.5 text-gray-300 hover:text-white hover:bg-purple-900/20 transition-colors"
+                                                >
+                                                    <User className="w-4 h-4" />
+                                                    <span className="text-sm">{language === 'en' ? 'My Profile' : 'मेरी प्रोफ़ाइल'}</span>
+                                                </Link>
+                                                
+                                                <Link
+                                                    to="/settings"
+                                                    onClick={() => setShowProfileMenu(false)}
+                                                    className="flex items-center gap-3 px-4 py-2.5 text-gray-300 hover:text-white hover:bg-purple-900/20 transition-colors"
+                                                >
+                                                    <Settings className="w-4 h-4" />
+                                                    <span className="text-sm">{language === 'en' ? 'Settings' : 'सेटिंग्स'}</span>
+                                                </Link>
+                                            </div>
+
+                                            <div className="border-t border-gray-800/60 py-2">
+                                                <button
+                                                    onClick={handleLogout}
+                                                    className="flex items-center gap-3 px-4 py-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors w-full"
+                                                >
+                                                    <LogOut className="w-4 h-4" />
+                                                    <span className="text-sm">{language === 'en' ? 'Log Out' : 'लॉग आउट'}</span>
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
                         ) : (
                             <>
-                                <Link to="/signup">
+                                <Link to="/login">
                                     <Button variant="outline" size="sm" className="ml-2 border-gray-700/50 text-gray-300 hover:text-white hover:bg-purple-900/20 hover:border-purple-500/30">
                                         Log In
                                     </Button>

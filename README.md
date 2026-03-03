@@ -1,172 +1,127 @@
-# House Rent Authentication System
+# 🏠 HomeHive - MERN Stack House Rent Application
 
-A robust authentication backend system for the House Rent application with JWT-based authentication, OTP password reset, and Cloudflare Turnstile verification.
+HomeHive is a premium, feature-rich house rental platform built using the MERN stack (MongoDB, Express.js, React, Node.js). It provides a seamless experience for Renters to find homes, Owners to list properties, and Admins to manage the entire ecosystem.
 
-## Features
+---
 
-- User Signup with Cloudflare Turnstile verification
-- Email verification with welcome email
-- JWT-based authentication
-- OTP-based password reset flow
-- Protected routes with middleware
-- MongoDB database integration
-- Email notifications via Nodemailer
+## ✨ Key Features
 
-## Tech Stack
+### 🔐 Multi-Role Authentication
+- **Secure Signup/Login**: Role-based access for Renters, Owners, and Admins.
+- **OTP Verification**: Email verification via OTP and Cloudflare Turnstile CAPTCHA integration.
+- **Profile Management**: Customizable user profiles with photo upload and bilingual support (English/Hindi).
 
-- Node.js & Express.js
-- MongoDB & Mongoose
-- JWT for authentication
-- Bcrypt for password hashing
-- Nodemailer for email
-- Cloudflare Turnstile for bot protection
+### 🏠 Property Ecosystem
+- **Advanced Search & Filter**: Search by location, price, BHK type, and amenities.
+- **Interactive Listings**: Property cards with image galleries, maps, and similar property suggestions.
+- **Comparison Tool**: Compare up to 3 properties side-by-side to make informed decisions.
+- **Owner Dashboard**: Comprehensive tools for owners to add, edit, and track property performance.
 
-## Setup Instructions
+### 📅 Booking & Payments
+- **Availability Calendar**: Real-time availability tracking for properties.
+- **Secure Payments**: Integrated with **Razorpay** for UPI, Cards, and Net Banking.
+- **Booking Management**: Track upcoming, active, and completed stays with automated receipts.
 
-### 1. Install Dependencies
+### 🎨 Premium UI/UX
+- **Modern Design**: Sleek dark theme with glassmorphism effects and smooth Framer Motion animations.
+- **Responsive & Mobile-First**: Optimized for all devices from mobile to large desktops.
+- **Real-Time Notifications**: In-app and email alerts for bookings, payments, and system updates.
 
-```bash
-cd backend
-npm install
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **Framework**: React.js with Vite
+- **State Management**: Zustand
+- **Styling**: Tailwind CSS
+- **Animations**: Framer Motion
+- **Icons**: Lucide React
+- **Charts**: Recharts
+
+### Backend
+- **Runtime**: Node.js & Express.js
+- **Database**: MongoDB with Mongoose ODM
+- **Authentication**: JWT (JSON Web Tokens) & Bcrypt.js
+- **Payments**: Razorpay Node SDK
+- **Email**: Nodemailer
+
+---
+
+## 📁 Project Structure
+
+```text
+house_rent/
+├── backend/             # Express server and Node.js logic
+│   ├── src/
+│   │   ├── config/      # Database and Mail configurations
+│   │   ├── middlewares/ # Auth and Error handlers
+│   │   ├── modules/     # Feature-based MVC modules (Auth, Property, Booking, etc.)
+│   │   └── utils/       # OTP and Token helpers
+│   └── server.js        # Entry point
+├── client/              # React frontend
+│   ├── src/
+│   │   ├── components/  # Reusable UI parts
+│   │   ├── pages/       # View layers
+│   │   ├── services/    # API communication
+│   │   └── store/       # State management (Zustand)
+│   └── vite.config.js
+└── package.json         # Root scripts for concurrent execution
 ```
 
-### 2. Configure Environment Variables
+---
 
-Update `backend/.env` with your credentials:
+## 🚀 Getting Started
 
-```env
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/house-rent
-JWT_SECRET=your_secure_jwt_secret_key_here
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_gmail_app_password
-TURNSTILE_SECRET_KEY=your_cloudflare_turnstile_secret
-NODE_ENV=development
-```
+### Prerequisites
+- Node.js (v16.x or higher)
+- MongoDB Atlas account or local MongoDB
+- Razorpay API Keys
+- Cloudflare Turnstile Site Key
 
-### 3. Gmail App Password Setup
+### Installation
 
-1. Enable 2-Factor Authentication on your Gmail account
-2. Go to Google Account Settings > Security > 2-Step Verification
-3. Scroll to "App passwords" and generate a new password
-4. Use this password in `EMAIL_PASS`
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd house_rent
+   ```
 
-### 4. Cloudflare Turnstile Setup
+2. **Install Dependencies (All at once)**
+   ```bash
+   npm run install-all
+   ```
 
-1. Go to [Cloudflare Dashboard](https://dash.cloudflare.com/)
-2. Navigate to Turnstile section
-3. Create a new site
-4. Copy the Secret Key to `TURNSTILE_SECRET_KEY`
+3. **Environment Variables**
+   Create a `.env` file in the `backend/` directory:
+   ```env
+   PORT=5000
+   MONGODB_URI=your_mongodb_uri
+   JWT_SECRET=your_jwt_secret
+   RAZORPAY_KEY_ID=your_key_id
+   RAZORPAY_KEY_SECRET=your_key_secret
+   EMAIL_USER=your_email
+   EMAIL_PASS=your_email_password
+   ```
 
-### 5. Start the Server
+4. **Run the Application**
+   ```bash
+   npm run dev
+   ```
+   - Frontend: `http://localhost:5173`
+   - Backend: `http://localhost:5000`
 
-```bash
-npm run dev
-```
+---
 
-Server will run on `http://localhost:5000`
+## 🛡️ Security & Best Practices
+- **Input Validation**: Strict schema validation using Mongoose.
+- **Security Middlewares**: JWT protection and role-based route restriction.
+- **Error Handling**: Centralized error middleware for consistent API responses.
+- **API Design**: RESTful conventions followed throughout the platform.
 
-## API Endpoints
+---
 
-See [API_DOCUMENTATION.md](backend/API_DOCUMENTATION.md) for detailed API documentation.
+## 📄 License
+This project is licensed under the ISC License.
 
-### Quick Reference
-
-- `POST /api/auth/signup` - Register new user
-- `POST /api/auth/login` - Login user
-- `POST /api/auth/forgot-password` - Request password reset OTP
-- `POST /api/auth/verify-otp` - Verify OTP
-- `POST /api/auth/reset-password` - Reset password
-- `GET /api/auth/profile` - Get user profile (Protected)
-
-## Testing with Postman/Thunder Client
-
-### 1. Signup
-```json
-POST http://localhost:5000/api/auth/signup
-Content-Type: application/json
-
-{
-  "name": "John Doe",
-  "mobile": "1234567890",
-  "email": "john@example.com",
-  "password": "password123",
-  "turnstileToken": "test_token"
-}
-```
-
-### 2. Login
-```json
-POST http://localhost:5000/api/auth/login
-Content-Type: application/json
-
-{
-  "email": "john@example.com",
-  "password": "password123"
-}
-```
-
-### 3. Access Protected Route
-```json
-GET http://localhost:5000/api/auth/profile
-Authorization: Bearer <your_jwt_token>
-```
-
-## Project Structure
-
-```
-backend/
-├── src/
-│   ├── config/
-│   │   ├── database.js       # MongoDB connection
-│   │   └── mail.js           # Email configuration
-│   ├── middlewares/
-│   │   ├── auth.middleware.js    # JWT verification
-│   │   └── error.middleware.js   # Error handling
-│   ├── modules/
-│   │   └── auth/
-│   │       ├── auth.model.js      # User schema
-│   │       ├── auth.service.js    # Business logic
-│   │       ├── auth.controller.js # Request handlers
-│   │       ├── auth.routes.js     # Route definitions
-│   │       └── auth.validation.js # Input validation
-│   ├── routes/
-│   │   └── index.js          # Main router
-│   ├── utils/
-│   │   ├── generateToken.js  # JWT generation
-│   │   └── generateOTP.js    # OTP generation
-│   └── app.js                # Express app setup
-├── server.js                 # Server entry point
-├── .env                      # Environment variables
-└── package.json              # Dependencies
-
-```
-
-## Security Features
-
-- Password hashing with bcrypt (10 salt rounds)
-- JWT tokens with 7-day expiration
-- OTP expires after 10 minutes
-- Cloudflare Turnstile bot protection
-- Protected routes with middleware
-- Input validation on all endpoints
-
-## Development Notes
-
-- Turnstile verification is skipped when `NODE_ENV=test`
-- Email sending errors are logged but don't block signup
-- All passwords are hashed before storage
-- OTP is cleared after successful password reset
-
-## Next Steps
-
-1. Add refresh token mechanism
-2. Implement rate limiting
-3. Add email verification on signup
-4. Create automated tests with Jest
-5. Add logging with Winston
-6. Implement account lockout after failed attempts
-
-## License
-
-ISC
+Developed with ❤️ as **HomeHive**.
