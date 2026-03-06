@@ -236,10 +236,35 @@ const resetPassword = async (email, otp, newPassword) => {
   return { message: 'Password reset successfully' };
 };
 
+const updateProfile = async (userId, updateData) => {
+  const { name, mobile, profileImage } = updateData;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  if (name) user.name = name;
+  if (mobile) user.mobile = mobile;
+  if (typeof profileImage !== 'undefined') user.profileImage = profileImage;
+
+  await user.save();
+
+  return {
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    mobile: user.mobile,
+    role: user.role,
+    profileImage: user.profileImage,
+  };
+};
+
 module.exports = {
   signup,
   login,
   forgotPassword,
   verifyOTP,
   resetPassword,
+  updateProfile,
 };

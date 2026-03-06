@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Users, Home, TrendingUp, AlertCircle } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
+import useAuthStore from '../store/useAuthStore';
 import { translations } from '../data/translations';
+import api from '../services/api';
 
 const COLORS = ['#9333EA', '#3B82F6', '#10B981', '#F59E0B'];
 
@@ -19,32 +21,87 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function AdminHome() {
-    const { user, language } = useAppStore();
+    const { language } = useAppStore();
+    const { user } = useAuthStore();
     const t = translations[language];
+    const [stats, setStats] = useState(null);
 
-    const totalBookingsByDate = [
-        { name: language === 'en' ? '10 Jun' : '10 जून', total: 45 },
-        { name: language === 'en' ? '11 Jun' : '11 जून', total: 52 },
-        { name: language === 'en' ? '12 Jun' : '12 जून', total: 38 },
-        { name: language === 'en' ? '13 Jun' : '13 जून', total: 65 },
-        { name: language === 'en' ? '14 Jun' : '14 जून', total: 48 },
-        { name: language === 'en' ? '15 Jun' : '15 जून', total: 72 },
-    ];
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const response = await api.getAdminStats();
+                if (response?.success && response.data) {
+                    setStats(response.data);
+                    return;
+                }
+            } catch (_) {
+                // keep fallback
+            }
+            setStats(null);
+        };
 
-    const usersByRole = [
-        { name: t.renters || "Renters", value: 850 },
-        { name: t.owners || "Owners", value: 150 },
-        { name: t.admins || "Admins", value: 5 },
-    ];
+        fetchStats();
+    }, []);
 
-    const propertiesAdded = [
-        { month: language === 'en' ? 'Jan' : 'जन', count: 20 },
-        { month: language === 'en' ? 'Feb' : 'फर', count: 35 },
-        { month: language === 'en' ? 'Mar' : 'मार्च', count: 45 },
-        { month: language === 'en' ? 'Apr' : 'अप्रैल', count: 80 },
-        { month: language === 'en' ? 'May' : 'मई', count: 120 },
-        { month: language === 'en' ? 'Jun' : 'जून', count: 160 },
-    ];
+    const totalBookingsByDate = useMemo(() => {
+        const recent = stats?.recentBookings;
+        if (!Array.isArray(recent)) {
+            return [
+                { name: language === 'en' ? '10 Jun' : '10 जून', total: 45 },
+                { name: language === 'en' ? '11 Jun' : '11 जून', total: 52 },
+                { name: language === 'en' ? '12 Jun' : '12 जून', total: 38 },
+                { name: language === 'en' ? '13 Jun' : '13 जून', total: 65 },
+                { name: language === 'en' ? '14 Jun' : '14 जून', total: 48 },
+                { name: language === 'en' ? '15 Jun' : '15 जून', total: 72 },
+            ];
+        }
+
+        const formatter = new Intl.DateTimeFormat(language === 'en' ? 'en-US' : 'hi-IN', { day: '2-digit', month: 'short' });
+        const map = {};
+        recent.forEach((booking) => {
+            const date = booking?.createdAt ? new Date(booking.createdAt) : null;
+            if (!date || Number.isNaN(date.getTime())) return;
+            const key = formatter.format(date);
+            map[key] = (map[key] || 0) + 1;
+        });
+        return Object.entries(map).map(([name, total]) => ({ name, total }));
+    }, [stats, language]);
+
+    const usersByRole = useMemo(() => {
+        if (stats?.usersByRole) {
+            return [
+                { name: t.renters || 'Renters', value: Number(stats.usersByRole.renter || 0) },
+                { name: t.owners || 'Owners', value: Number(stats.usersByRole.owner || 0) },
+                { name: t.admins || 'Admins', value: Number(stats.usersByRole.admin || 0) },
+            ];
+        }
+
+        return [
+            { name: t.renters || "Renters", value: 850 },
+            { name: t.owners || "Owners", value: 150 },
+            { name: t.admins || "Admins", value: 5 },
+        ];
+    }, [stats, t]);
+
+    const propertiesAdded = useMemo(() => {
+        if (Array.isArray(stats?.propertiesByCity) && stats.propertiesByCity.length > 0) {
+            return stats.propertiesByCity.map((item) => ({
+                month: item._id,
+                count: Number(item.count || 0),
+            }));
+        }
+
+        return [
+            { month: language === 'en' ? 'Jan' : 'जन', count: 20 },
+            { month: language === 'en' ? 'Feb' : 'फर', count: 35 },
+            { month: language === 'en' ? 'Mar' : 'मार्च', count: 45 },
+            { month: language === 'en' ? 'Apr' : 'अप्रैल', count: 80 },
+            { month: language === 'en' ? 'May' : 'मई', count: 120 },
+            { month: language === 'en' ? 'Jun' : 'जून', count: 160 },
+        ];
+    }, [stats, language]);
+
+    const overview = stats?.overview;
 
     return (
         <div className="min-h-screen bg-[#0B0B13] relative overflow-hidden font-sans">
@@ -66,10 +123,10 @@ export default function AdminHome() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
                     {[
-                        { title: t.totalUsers || "Total Users", value: '1,005', icon: Users, color: 'text-purple-400', bg: 'bg-purple-900/20', border: 'border-purple-500/20' },
-                        { title: t.listedProperties || "Listed Properties", value: '462', icon: Home, color: 'text-blue-400', bg: 'bg-blue-900/20', border: 'border-blue-500/20' },
-                        { title: t.platformRevenue || "Platform Revenue", value: language === 'en' ? '₹1.2M' : '₹1.2 मि.', icon: TrendingUp, color: 'text-green-400', bg: 'bg-green-900/20', border: 'border-green-500/20' },
-                        { title: t.activeReports || "Active Reports", value: '14', icon: AlertCircle, color: 'text-pink-400', bg: 'bg-pink-900/20', border: 'border-pink-500/20' },
+                        { title: t.totalUsers || "Total Users", value: String(overview?.totalUsers ?? 1005), icon: Users, color: 'text-purple-400', bg: 'bg-purple-900/20', border: 'border-purple-500/20' },
+                        { title: t.listedProperties || "Listed Properties", value: String(overview?.totalProperties ?? 462), icon: Home, color: 'text-blue-400', bg: 'bg-blue-900/20', border: 'border-blue-500/20' },
+                        { title: t.platformRevenue || "Platform Revenue", value: `₹${Number(overview?.totalRevenue ?? 1200000).toLocaleString(language === 'en' ? 'en-IN' : 'hi-IN')}`, icon: TrendingUp, color: 'text-green-400', bg: 'bg-green-900/20', border: 'border-green-500/20' },
+                        { title: t.activeReports || "Active Reports", value: String(overview?.totalBookings ?? 14), icon: AlertCircle, color: 'text-pink-400', bg: 'bg-pink-900/20', border: 'border-pink-500/20' },
                     ].map((stat, i) => {
                         const Icon = stat.icon;
                         return (

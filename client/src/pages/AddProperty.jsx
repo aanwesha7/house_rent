@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import useAppStore from '../store/useAppStore';
 import { Upload, X, Home, MapPin, IndianRupee, BedDouble, FileText, Image } from 'lucide-react';
 import { translations } from '../data/translations';
+import api from '../services/api';
+import useAuthStore from '../store/useAuthStore';
 
 export default function AddProperty() {
     const navigate = useNavigate();
     const { addOwnerProperty, language } = useAppStore();
+    const { isAuthenticated, user } = useAuthStore();
     const t = translations[language];
 
     const [form, setForm] = useState({
@@ -24,6 +27,8 @@ export default function AddProperty() {
     const [imagePreview, setImagePreview] = useState(null);
     const [errors, setErrors] = useState({});
     const [submitted, setSubmitted] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [apiError, setApiError] = useState('');
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -58,7 +63,7 @@ export default function AddProperty() {
         return newErrors;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const validationErrors = validate();
         if (Object.keys(validationErrors).length > 0) {
@@ -66,24 +71,51 @@ export default function AddProperty() {
             return;
         }
 
-        const newProperty = {
-            ...form,
-            id: Date.now(),
-            price: Number(form.price), // Ensure price is a number
+        if (!isAuthenticated || !user) {
+            navigate('/login');
+            return;
+        }
+
+        setApiError('');
+        setSubmitting(true);
+
+        const payload = {
+            title: form.title,
+            city: form.city,
+            price: Number(form.price),
+            bhk: form.bhk ? `${form.bhk}BHK` : '1BHK',
+            description: form.description,
+            address: form.address,
+            image: form.image || 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&fit=crop',
             coordinates: form.latitude && form.longitude ? {
                 lat: parseFloat(form.latitude),
                 lng: parseFloat(form.longitude)
             } : null,
-            image: form.image || 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&fit=crop',
-            createdAt: new Date().toISOString(),
         };
 
-        addOwnerProperty(newProperty);
-        setSubmitted(true);
+        try {
+            const response = await api.createProperty(payload);
+            if (response?.success && response.data) {
+                addOwnerProperty({
+                    ...response.data,
+                    id: response.data._id || response.data.id,
+                    location: response.data.city,
+                    rooms: response.data.bhk,
+                    images: response.data.images?.length ? response.data.images : [response.data.image],
+                });
+                setSubmitted(true);
+                setTimeout(() => {
+                    navigate('/owner');
+                }, 2000);
+                return;
+            }
 
-        setTimeout(() => {
-            navigate('/owner');
-        }, 2000);
+            setApiError(response?.message || 'Failed to add property');
+        } catch (error) {
+            setApiError(error.message || 'Failed to add property');
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     if (submitted) {
@@ -126,6 +158,11 @@ export default function AddProperty() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="bg-[#15161E]/80 backdrop-blur-xl rounded-3xl border border-gray-800/60 p-8 shadow-xl space-y-6">
+                    {apiError ? (
+                        <div className="p-3 rounded-xl bg-red-900/30 border border-red-500/40 text-red-200 text-sm">
+                            {apiError}
+                        </div>
+                    ) : null}
 
                     {/* Title */}
                     <div>
@@ -272,10 +309,11 @@ export default function AddProperty() {
                         </button>
                         <button
                             type="submit"
+                            disabled={submitting}
                             className="flex-[2] bg-gradient-to-r from-[#9333EA] to-[#A855F7] hover:from-[#A855F7] hover:to-[#9333EA] text-white font-bold py-3.5 rounded-xl transition-all shadow-[0_0_15px_rgba(147,51,234,0.4)] hover:shadow-[0_0_25px_rgba(147,51,234,0.6)] flex items-center justify-center gap-2"
                         >
                             <Upload className="w-5 h-5" />
-                            {t.listProperty || "List Property"}
+                            {submitting ? (t.loading || 'Submitting...') : (t.listProperty || 'List Property')}
                         </button>
                     </div>
                 </form>

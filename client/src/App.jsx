@@ -11,10 +11,13 @@ import SignUp from './pages/SignUp';
 import Login from './pages/Login';
 import AddProperty from './pages/AddProperty';
 import Profile from './pages/Profile';
+import Settings from './pages/Settings';
+import ForgotPassword from './pages/ForgotPassword';
 import AboutUs from './pages/AboutUs';
 import ContactUs from './pages/ContactUs';
 import TermsAndConditions from './pages/TermsAndConditions';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import ProtectedRoute from './components/common/ProtectedRoute';
 
 function App() {
     return (
@@ -22,6 +25,7 @@ function App() {
             <Routes>
                 <Route path="/signup" element={<SignUp />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/" element={<Layout />}>
                     <Route index element={<Home />} />
                     <Route path="properties" element={<AllProperties />} />
@@ -32,11 +36,12 @@ function App() {
                     <Route path="terms" element={<TermsAndConditions />} />
                     <Route path="privacy" element={<PrivacyPolicy />} />
 
-                    <Route path="renter" element={<RenterHome />} />
-                    <Route path="owner" element={<OwnerHome />} />
-                    <Route path="owner/add-property" element={<AddProperty />} />
-                    <Route path="admin" element={<AdminHome />} />
-                    <Route path="profile" element={<Profile />} />
+                    <Route path="renter" element={<ProtectedRoute allowedRoles={['renter', 'owner', 'admin']}><RenterHome /></ProtectedRoute>} />
+                    <Route path="owner" element={<ProtectedRoute allowedRoles={['owner', 'admin']}><OwnerHome /></ProtectedRoute>} />
+                    <Route path="owner/add-property" element={<ProtectedRoute allowedRoles={['owner', 'admin']}><AddProperty /></ProtectedRoute>} />
+                    <Route path="admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminHome /></ProtectedRoute>} />
+                    <Route path="profile" element={<ProtectedRoute allowedRoles={['renter', 'owner', 'admin']}><Profile /></ProtectedRoute>} />
+                    <Route path="settings" element={<ProtectedRoute allowedRoles={['renter', 'owner', 'admin']}><Settings /></ProtectedRoute>} />
                 </Route>
             </Routes>
         </BrowserRouter>

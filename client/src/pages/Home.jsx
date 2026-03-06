@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, ArrowRight, SlidersHorizontal, X, Shield, MapPin, Headset } from 'lucide-react';
 import { translations } from '../data/translations';
@@ -6,10 +6,27 @@ import { MOCK_PROPERTIES } from '../data/mockData';
 import useAppStore from '../store/useAppStore';
 import PropertyCard from '../components/property/PropertyCard';
 import { Button } from '../components/ui/button';
+import api from '../services/api';
+
+const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&fit=crop';
+
+const normalizeProperty = (property) => ({
+    ...property,
+    id: property._id || property.id,
+    location: property.location || property.city || '',
+    rooms: property.rooms || property.bhk || '',
+    price: Number(property.price || 0),
+    rating: Number(property.rating || 0),
+    createdAt: property.createdAt || new Date().toISOString(),
+    images: Array.isArray(property.images) && property.images.length > 0
+        ? property.images
+        : [property.image || DEFAULT_IMAGE],
+});
 
 export default function Home() {
-    const { language, ownerProperties } = useAppStore();
+    const { language } = useAppStore();
     const t = translations[language];
+    const [apiProperties, setApiProperties] = useState([]);
 
     // Search & Filter state
     const [searchCity, setSearchCity] = useState('');
@@ -17,16 +34,25 @@ export default function Home() {
     const [maxPrice, setMaxPrice] = useState('');
     const [sortBy, setSortBy] = useState('newest'); // 'newest', 'price-low', 'price-high'
 
-    // Combine mock properties with owner-added properties
-    const allProperties = [
-        ...MOCK_PROPERTIES,
-        ...ownerProperties.map(p => ({
-            ...p,
-            location: p.city,
-            rooms: `${p.bhk} BHK`,
-            images: [p.image],
-        })),
-    ];
+    useEffect(() => {
+        const fetchProperties = async () => {
+            try {
+                const response = await api.getAllProperties();
+                if (response?.success && Array.isArray(response.data)) {
+                    setApiProperties(response.data.map(normalizeProperty));
+                    return;
+                }
+            } catch (_) {
+                // fall back to mock data
+            }
+
+            setApiProperties(MOCK_PROPERTIES.map(normalizeProperty));
+        };
+
+        fetchProperties();
+    }, []);
+
+    const allProperties = apiProperties;
 
     // Filtered properties
     const filteredProperties = allProperties.filter(property => {
@@ -191,7 +217,7 @@ export default function Home() {
                     {filteredProperties.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                             {filteredProperties.map((property) => (
-                                <PropertyCard key={property.id} property={property} />
+                                <PropertyCard key={property.id || property._id} property={property} />
                             ))}
                         </div>
                     ) : (

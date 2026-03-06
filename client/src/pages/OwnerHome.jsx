@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Home, IndianRupee, Star, TrendingUp, Plus } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
+import useAuthStore from '../store/useAuthStore';
 import { translations } from '../data/translations';
+import api from '../services/api';
 
 const COLORS = ['#9333EA', '#3B82F6', '#10B981', '#F59E0B'];
 
@@ -20,24 +22,66 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function OwnerHome() {
-    const { user, ownerProperties, language } = useAppStore();
+    const { language } = useAppStore();
+    const { user } = useAuthStore();
     const t = translations[language];
+    const [ownerProperties, setOwnerProperties] = useState([]);
+    const [ownerBookings, setOwnerBookings] = useState([]);
 
-    const monthlyBookings = [
-        { name: language === 'en' ? 'Jan' : 'जन', bookings: 12 },
-        { name: language === 'en' ? 'Feb' : 'फर', bookings: 19 },
-        { name: language === 'en' ? 'Mar' : 'मार्च', bookings: 15 },
-        { name: language === 'en' ? 'Apr' : 'अप्रैल', bookings: 22 },
-        { name: language === 'en' ? 'May' : 'मई', bookings: 28 },
-        { name: language === 'en' ? 'Jun' : 'जून', bookings: 24 },
-    ];
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                const [propertiesResponse, bookingsResponse] = await Promise.all([
+                    api.getOwnerProperties(),
+                    api.getOwnerBookings(),
+                ]);
 
-    const roomDistribution = [
-        { name: '1BHK', value: 3 },
-        { name: '2BHK', value: 8 },
-        { name: '3BHK', value: 5 },
-        { name: 'Villa', value: 2 },
-    ];
+                setOwnerProperties(Array.isArray(propertiesResponse?.data) ? propertiesResponse.data : []);
+                setOwnerBookings(Array.isArray(bookingsResponse?.data) ? bookingsResponse.data : []);
+            } catch (_) {
+                setOwnerProperties([]);
+                setOwnerBookings([]);
+            }
+        };
+
+        fetchDashboardData();
+    }, []);
+
+    const totalRevenue = useMemo(
+        () => ownerBookings
+            .filter((booking) => booking.paymentStatus === 'paid')
+            .reduce((sum, booking) => sum + Number(booking.totalPrice || 0), 0),
+        [ownerBookings]
+    );
+
+    const averageRating = useMemo(() => {
+        if (ownerProperties.length === 0) return 0;
+        const total = ownerProperties.reduce((sum, property) => sum + Number(property.rating || 0), 0);
+        return total / ownerProperties.length;
+    }, [ownerProperties]);
+
+    const monthlyBookings = useMemo(() => {
+        const formatter = new Intl.DateTimeFormat(language === 'en' ? 'en-US' : 'hi-IN', { month: 'short' });
+        const map = {};
+
+        ownerBookings.forEach((booking) => {
+            const date = booking?.createdAt ? new Date(booking.createdAt) : null;
+            if (!date || Number.isNaN(date.getTime())) return;
+            const key = formatter.format(date);
+            map[key] = (map[key] || 0) + 1;
+        });
+
+        return Object.entries(map).map(([name, bookings]) => ({ name, bookings }));
+    }, [ownerBookings, language]);
+
+    const roomDistribution = useMemo(() => {
+        const map = {};
+        ownerProperties.forEach((property) => {
+            const key = property.bhk || property.type || 'Other';
+            map[key] = (map[key] || 0) + 1;
+        });
+        return Object.entries(map).map(([name, value]) => ({ name, value }));
+    }, [ownerProperties]);
 
     return (
         <div className="min-h-screen bg-[#0B0B13] relative overflow-hidden font-sans">
@@ -65,10 +109,10 @@ export default function OwnerHome() {
                 {/* Stat Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     {[
-                        { title: t.totalProperties || "Total Properties", value: String(18 + ownerProperties.length), icon: Home, color: 'text-blue-400', bg: 'bg-blue-900/20', border: 'border-blue-500/20' },
-                        { title: t.totalBookingsStat || "Total Bookings", value: '120', icon: TrendingUp, color: 'text-green-400', bg: 'bg-green-900/20', border: 'border-green-500/20' },
-                        { title: t.rentCollected || "Rent Collected", value: language === 'en' ? '₹4.2L' : '₹4.2 लाख', icon: IndianRupee, color: 'text-purple-400', bg: 'bg-purple-900/20', border: 'border-purple-500/20' },
-                        { title: t.avgRating || "Avg Rating", value: '4.8', icon: Star, color: 'text-yellow-400', bg: 'bg-yellow-900/20', border: 'border-yellow-500/20' },
+                        { title: t.totalProperties || "Total Properties", value: String(ownerProperties.length), icon: Home, color: 'text-blue-400', bg: 'bg-blue-900/20', border: 'border-blue-500/20' },
+                        { title: t.totalBookingsStat || "Total Bookings", value: String(ownerBookings.length), icon: TrendingUp, color: 'text-green-400', bg: 'bg-green-900/20', border: 'border-green-500/20' },
+                        { title: t.rentCollected || "Rent Collected", value: `₹${Math.round(totalRevenue).toLocaleString(language === 'en' ? 'en-IN' : 'hi-IN')}`, icon: IndianRupee, color: 'text-purple-400', bg: 'bg-purple-900/20', border: 'border-purple-500/20' },
+                        { title: t.avgRating || "Avg Rating", value: averageRating.toFixed(1), icon: Star, color: 'text-yellow-400', bg: 'bg-yellow-900/20', border: 'border-yellow-500/20' },
                     ].map((stat, i) => {
                         const Icon = stat.icon;
                         return (
@@ -91,18 +135,18 @@ export default function OwnerHome() {
                         <h2 className="text-xl font-bold text-white mb-6 border-b border-gray-800/60 pb-4 inline-block">{t.yourListedProperties || "Your Listed Properties"}</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {ownerProperties.map((prop) => (
-                                <div key={prop.id} className="bg-[#1A1C26]/80 rounded-2xl border border-gray-700/50 shadow-md overflow-hidden group hover:border-[#A855F7]/40 transition-all hover:shadow-[0_0_20px_rgba(168,85,247,0.15)] flex flex-col">
+                                <div key={prop._id || prop.id} className="bg-[#1A1C26]/80 rounded-2xl border border-gray-700/50 shadow-md overflow-hidden group hover:border-[#A855F7]/40 transition-all hover:shadow-[0_0_20px_rgba(168,85,247,0.15)] flex flex-col">
                                     <div className="h-48 overflow-hidden relative">
                                         <div className="absolute inset-0 bg-gradient-to-t from-[#1A1C26] via-transparent to-transparent z-10" />
-                                        <img src={prop.image} alt={prop.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                        <img src={prop.image || prop.images?.[0]} alt={prop.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                         <div className="absolute top-3 right-3 z-20 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white border border-gray-600/50">
-                                            {prop.bhk} BHK
+                                            {prop.bhk}
                                         </div>
                                     </div>
                                     <div className="p-5 flex flex-col flex-1">
                                         <h3 className="font-bold text-lg text-white mb-2 line-clamp-1 group-hover:text-[#A855F7] transition-colors">{prop.title}</h3>
                                         <p className="text-sm text-gray-400 flex items-center gap-1.5 mb-4">
-                                            <span className="text-blue-400">📍</span> {prop.city}
+                                            <span className="text-blue-400">📍</span> {prop.city || prop.location}
                                         </p>
                                         <div className="mt-auto pt-4 border-t border-gray-700/50 flex justify-between items-center">
                                             <p className="text-[#A855F7] font-bold text-xl drop-shadow-[0_0_5px_rgba(168,85,247,0.3)]">

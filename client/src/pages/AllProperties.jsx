@@ -9,9 +9,24 @@ import EmptyState from '../components/common/EmptyState';
 import { MOCK_PROPERTIES } from '../data/mockData';
 import useAppStore from '../store/useAppStore';
 import { translations } from '../data/translations';
+import api from '../services/api';
 
 const ROOM_OPTIONS = ['1BHK', '2BHK', '3BHK', '4BHK'];
 const PROPERTY_TYPE_OPTIONS = ['Apartment', 'Villa', 'House', 'Studio', 'Penthouse'];
+const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&fit=crop';
+
+const normalizeProperty = (property) => ({
+    ...property,
+    id: property._id || property.id,
+    location: property.location || property.city || '',
+    rooms: property.rooms || property.bhk || '',
+    rating: Number(property.rating || 0),
+    price: Number(property.price || 0),
+    createdAt: property.createdAt || new Date().toISOString(),
+    images: Array.isArray(property.images) && property.images.length > 0
+        ? property.images
+        : [property.image || DEFAULT_IMAGE],
+});
 
 export default function AllProperties() {
     const [searchParams] = useSearchParams();
@@ -47,11 +62,23 @@ export default function AllProperties() {
     }, [searchQuery]);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            setProperties(MOCK_PROPERTIES);
-            setLoading(false);
-        }, 1500);
-        return () => clearTimeout(timer);
+        const fetchProperties = async () => {
+            setLoading(true);
+            try {
+                const response = await api.getAllProperties();
+                if (response?.success && Array.isArray(response.data)) {
+                    setProperties(response.data.map(normalizeProperty));
+                } else {
+                    setProperties(MOCK_PROPERTIES.map(normalizeProperty));
+                }
+            } catch (_) {
+                setProperties(MOCK_PROPERTIES.map(normalizeProperty));
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProperties();
     }, []);
 
     const applyFilters = () => {

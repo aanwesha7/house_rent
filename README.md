@@ -93,7 +93,13 @@ house_rent/
    ```
 
 3. **Environment Variables**
-   Create a `.env` file in the `backend/` directory:
+   Copy env templates and update values:
+   ```bash
+   copy backend\\.env.example backend\\.env
+   copy client\\.env.example client\\.env
+   ```
+
+   Backend env reference:
    ```env
    PORT=5000
    MONGODB_URI=your_mongodb_uri
@@ -104,12 +110,23 @@ house_rent/
    EMAIL_PASS=your_email_password
    ```
 
+   Frontend env reference:
+   ```env
+   VITE_API_URL=http://localhost:5000/api
+   VITE_TURNSTILE_SITE_KEY=your_turnstile_site_key
+   ```
+
 4. **Run the Application**
    ```bash
    npm run dev
    ```
    - Frontend: `http://localhost:5173`
    - Backend: `http://localhost:5000`
+
+5. **Quick Health Check**
+   ```bash
+   curl http://localhost:5000/api/health
+   ```
 
 ---
 

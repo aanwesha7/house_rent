@@ -1,12 +1,14 @@
 import React from 'react';
 import { translations } from '../data/translations';
 import useAppStore from '../store/useAppStore';
+import useAuthStore from '../store/useAuthStore';
 import { LogOut, Heart, Clock, Home as HomeIcon, ChevronRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 
 export default function RenterHome() {
-    const { language, user, logout, savedPropertyIds } = useAppStore();
+    const { language, savedPropertyIds } = useAppStore();
+    const { user, logout } = useAuthStore();
     const t = translations[language];
     const navigate = useNavigate();
 

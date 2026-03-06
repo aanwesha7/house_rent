@@ -6,6 +6,13 @@ import useAppStore from '../../store/useAppStore';
 
 export default function PropertyCard({ property }) {
     const { savedPropertyIds, toggleSaveProperty } = useAppStore();
+    const propertyId = property.id || property._id;
+    const imageUrl = (Array.isArray(property.images) && property.images.length > 0)
+        ? property.images[0]
+        : property.image;
+    const location = property.location || property.city || 'Location unavailable';
+    const rooms = property.rooms || property.bhk || '-';
+    const price = Number(property.price || 0);
 
     const handleShowMap = (e) => {
         e.preventDefault();
@@ -18,11 +25,11 @@ export default function PropertyCard({ property }) {
     };
 
     return (
-        <Link to={`/properties/${property.id}`} className="group block h-full">
+        <Link to={`/properties/${propertyId}`} className="group block h-full">
             <div className="h-full flex flex-col rounded-2xl overflow-hidden border border-gray-800/60 bg-[#15161E]/80 backdrop-blur-sm shadow-lg transition-all hover:shadow-[0_0_20px_rgba(168,85,247,0.15)] hover:-translate-y-1 hover:border-purple-500/40 duration-300">
                 <div className="relative aspect-[4/3] overflow-hidden flex-shrink-0">
                     <img
-                        src={property.images[0]}
+                        src={imageUrl}
                         alt={property.title}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         loading="lazy"
@@ -47,11 +54,11 @@ export default function PropertyCard({ property }) {
                             onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                toggleSaveProperty(property.id);
+                                toggleSaveProperty(propertyId);
                             }}
-                            className={`p-2 rounded-full bg-[#15161E]/90 backdrop-blur-md transition-all shadow-lg border border-gray-700/50 hover:scale-110 hover:border-red-500/50 ${(savedPropertyIds || []).includes(property.id) ? 'text-red-500 border-red-500/30' : 'text-gray-400 hover:text-red-500'}`}
+                            className={`p-2 rounded-full bg-[#15161E]/90 backdrop-blur-md transition-all shadow-lg border border-gray-700/50 hover:scale-110 hover:border-red-500/50 ${(savedPropertyIds || []).includes(propertyId) ? 'text-red-500 border-red-500/30' : 'text-gray-400 hover:text-red-500'}`}
                         >
-                            <Heart className={`w-4 h-4 ${(savedPropertyIds || []).includes(property.id) ? 'fill-red-500 drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]' : ''}`} />
+                            <Heart className={`w-4 h-4 ${(savedPropertyIds || []).includes(propertyId) ? 'fill-red-500 drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]' : ''}`} />
                         </button>
                     </div>
 
@@ -62,7 +69,7 @@ export default function PropertyCard({ property }) {
                             </h3>
                             <p className="flex items-center text-sm text-gray-400 gap-1.5 line-clamp-1">
                                 <MapPin className="w-3.5 h-3.5 text-purple-400/80" />
-                                {property.location}
+                                {location}
                             </p>
                         </div>
                     </div>
@@ -70,13 +77,13 @@ export default function PropertyCard({ property }) {
                     <div className="flex items-center gap-4 text-sm text-gray-300 mb-4 flex-grow">
                         <div className="flex items-center gap-1.5 bg-purple-900/20 px-3 py-1.5 rounded-lg border border-purple-500/20 shadow-inner">
                             <BedDouble className="w-4 h-4 text-purple-400" />
-                            <span className="font-semibold text-purple-100">{property.rooms}</span>
+                            <span className="font-semibold text-purple-100">{rooms}</span>
                         </div>
                     </div>
 
                     <div className="flex items-center justify-between pt-4 border-t border-gray-800/60 mt-auto">
                         <div className="font-bold text-xl text-white flex items-baseline gap-1">
-                            ₹{property.price.toLocaleString('en-IN')}
+                            ₹{price.toLocaleString('en-IN')}
                             <span className="text-xs font-medium text-gray-500">/mo</span>
                         </div>
                         <button

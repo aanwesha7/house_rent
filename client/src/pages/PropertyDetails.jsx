@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { translations } from '../data/translations';
 import useAppStore from '../store/useAppStore';
-import { MOCK_PROPERTIES } from '../data/mockData';
+import useAuthStore from '../store/useAuthStore';
 import {
     ChevronLeft, Star, MapPin, Share, Heart,
     Wifi, Car, Home as HomeIcon, CheckCircle2,
@@ -17,10 +17,28 @@ import AvailabilityCalendar from '../components/booking/AvailabilityCalendar';
 import MultiStepBooking from '../components/booking/MultiStepBooking';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
+import api from '../services/api';
+
+const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&fit=crop';
+
+const normalizeProperty = (property) => ({
+    ...property,
+    id: property._id || property.id,
+    location: property.location || property.city || '',
+    rooms: property.rooms || property.bhk || '',
+    reviews: property.reviews || property.reviewCount || 0,
+    amenities: Array.isArray(property.amenities) ? property.amenities : [],
+    hostId: property.owner?._id || property.hostId || 'owner',
+    coordinates: property.coordinates || { lat: 28.7041, lng: 77.1025 },
+    images: Array.isArray(property.images) && property.images.length > 0
+        ? property.images
+        : [property.image || DEFAULT_IMAGE],
+});
 
 export default function PropertyDetails() {
     const { id } = useParams();
-    const { language, ownerProperties, isAuthenticated, user, toggleChat, savedPropertyIds, toggleSaveProperty } = useAppStore();
+    const { language, toggleChat, savedPropertyIds, toggleSaveProperty } = useAppStore();
+    const { isAuthenticated, user } = useAuthStore();
     const t = translations[language];
 
     const [property, setProperty] = useState(null);
@@ -37,70 +55,37 @@ export default function PropertyDetails() {
     const [isBookingOpen, setIsBookingOpen] = useState(false);
 
     useEffect(() => {
-        // Simulate API fetch delay
-        const timer = setTimeout(() => {
-            // Search both mock and owner-added properties
-            let found = MOCK_PROPERTIES.find(p => p.id === parseInt(id || '1'));
-            if (!found) {
-                const ownerProp = ownerProperties.find(p => p.id === parseInt(id || '1'));
-                if (ownerProp) {
-                    found = {
-                        ...ownerProp,
-                        location: ownerProp.city,
-                        rooms: `${ownerProp.bhk} BHK`,
-                        type: 'Apartment',
-                        rating: 4.5,
-                        reviews: 0,
-                        amenities: ['WiFi', 'Parking'],
-                        images: [ownerProp.image],
-                        hostId: 'owner',
-                        address: ownerProp.address || `${ownerProp.bhk} BHK, ${ownerProp.city}`,
-                        coordinates: ownerProp.coordinates || { lat: 28.7041, lng: 77.1025 }
-                    };
+        const fetchProperty = async () => {
+            setLoading(true);
+            try {
+                const response = await api.getPropertyById(id);
+                if (response?.success && response.data) {
+                    setProperty(normalizeProperty(response.data));
+                } else {
+                    setProperty(null);
                 }
+            } catch (_) {
+                setProperty(null);
+            } finally {
+                setLoading(false);
             }
-            setProperty(found || MOCK_PROPERTIES[0]);
-            setLoading(false);
-        }, 1000);
-        return () => clearTimeout(timer);
-    }, [id, ownerProperties]);
+        };
+
+        fetchProperty();
+    }, [id]);
 
     const handleBooking = async () => {
         if (!isAuthenticated) {
             alert(language === 'en' ? 'Please login to book a property' : 'प्रॉपर्टी बुक करने के लिए कृपया लॉगिन करें');
             return;
         }
-
-        try {
-            setBookingStatus('loading');
-
-            // 1. Create order on backend
-            const orderData = await createOrder(
-                property.price,
-                property.id,
-                property.title,
-                user?.id || 'demo_user'
-            );
-
-            // 2. Open Razorpay Popup
-            openRazorpayCheckout(
-                orderData,
-                property,
-                (successData) => {
-                    console.log('Payment Success:', successData);
-                    setBookingStatus('success');
-                },
-                (errorData) => {
-                    console.error('Payment Error:', errorData);
-                    setBookingStatus('error');
-                }
-            );
-        } catch (err) {
-            console.error('Booking Error:', err);
-            setBookingStatus('error');
-            alert(err.message || 'Something went wrong');
-        }
+        setIsBookingOpen(true);
     };
+
+    const propertyId = property?.id || property?._id;
+    const ownerName = property?.owner?.name || (property?.hostId === 'owner' ? (language === 'en' ? 'You (Owner)' : 'आप (मालिक)') : 'Owner');
+    const ownerEmail = property?.owner?.email || 'owner@email.com';
+    const ownerMobile = property?.owner?.mobile || '+91 98XXX XXXXX';
 
     const handleShare = async () => {
         const shareData = {
@@ -180,10 +165,10 @@ export default function PropertyDetails() {
                         </Button>
                         <Button
                             variant="outline"
-                            onClick={() => toggleSaveProperty(property.id)}
-                            className={`gap-2 transition-colors ${(savedPropertyIds || []).includes(property.id) ? 'text-pink-500 bg-pink-950/30 border-pink-900/50' : 'bg-[#1A1C26]/50 border-gray-700/50 text-gray-300 hover:bg-[#1A1C26] hover:text-pink-400 hover:border-pink-900/50'}`}
+                            onClick={() => toggleSaveProperty(propertyId)}
+                            className={`gap-2 transition-colors ${(savedPropertyIds || []).includes(propertyId) ? 'text-pink-500 bg-pink-950/30 border-pink-900/50' : 'bg-[#1A1C26]/50 border-gray-700/50 text-gray-300 hover:bg-[#1A1C26] hover:text-pink-400 hover:border-pink-900/50'}`}
                         >
-                            <Heart className={`w-4 h-4 ${(savedPropertyIds || []).includes(property.id) ? 'fill-pink-500' : ''}`} /> {t.save}
+                            <Heart className={`w-4 h-4 ${(savedPropertyIds || []).includes(propertyId) ? 'fill-pink-500' : ''}`} /> {t.save}
                         </Button>
                     </div>
                 </div>
@@ -280,15 +265,15 @@ export default function PropertyDetails() {
                             <h2 className="text-2xl font-bold text-white mb-6 border-b border-gray-800/60 pb-4">{t.ownerInfo}</h2>
                             <div className="bg-[#15161E]/80 backdrop-blur-sm border border-gray-800/60 rounded-[32px] p-8 flex flex-col sm:flex-row items-start sm:items-center gap-6">
                                 <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#9333EA] to-[#3B82F6] flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-purple-900/30 flex-shrink-0 border-2 border-[#15161E] ring-2 ring-purple-500/20">
-                                    {property.hostId === 'owner' ? 'Y' : property.hostId === 'o1' ? 'R' : property.hostId === 'o2' ? 'A' : 'S'}
+                                    {ownerName?.charAt(0)?.toUpperCase() || 'O'}
                                 </div>
                                 <div className="flex-1">
                                     <h3 className="font-bold text-xl text-white mb-1">
-                                        {property.hostId === 'owner' ? (language === 'en' ? 'You (Owner)' : 'आप (मालिक)') : property.hostId === 'o1' ? 'Rahul Sharma' : property.hostId === 'o2' ? 'Anita Verma' : 'Suresh Patel'}
+                                        {ownerName}
                                     </h3>
                                     <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-400">
-                                        <span className="flex items-center gap-2"><Mail className="w-4 h-4 text-purple-400" /> {property.hostId === 'owner' ? 'you@email.com' : property.hostId === 'o1' ? 'rahul@email.com' : property.hostId === 'o2' ? 'anita@email.com' : 'suresh@email.com'}</span>
-                                        <span className="flex items-center gap-2"><Phone className="w-4 h-4 text-green-400" /> +91 98XXX XXXXX</span>
+                                        <span className="flex items-center gap-2"><Mail className="w-4 h-4 text-purple-400" /> {ownerEmail}</span>
+                                        <span className="flex items-center gap-2"><Phone className="w-4 h-4 text-green-400" /> {ownerMobile}</span>
                                     </div>
                                     <div className="flex items-center gap-3 mt-4">
                                         <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-green-900/30 text-green-400 border border-green-500/20 px-3 py-1.5 rounded-full">
@@ -299,8 +284,8 @@ export default function PropertyDetails() {
                                 </div>
                                 <Button
                                     onClick={() => toggleChat({
-                                        id: property.hostId,
-                                        name: property.hostId === 'owner' ? 'You' : property.hostId === 'o1' ? 'Rahul Sharma' : property.hostId === 'o2' ? 'Anita Verma' : 'Suresh Patel',
+                                        id: property.owner?._id || property.hostId,
+                                        name: ownerName,
                                         role: 'owner'
                                     })}
                                     variant="outline"
@@ -399,8 +384,8 @@ export default function PropertyDetails() {
                                 variant="outline"
                                 className="w-full mt-4 h-12 flex items-center justify-center gap-2 rounded-2xl border-gray-700/50 bg-[#1A1C26]/50 hover:bg-[#1A1C26] text-purple-400 transition-colors"
                                 onClick={() => toggleChat({
-                                    id: property.hostId,
-                                    name: property.hostId === 'owner' ? 'You' : property.hostId === 'o1' ? 'Rahul Sharma' : property.hostId === 'o2' ? 'Anita Verma' : 'Suresh Patel',
+                                    id: property.owner?._id || property.hostId,
+                                    name: ownerName,
                                     role: 'owner'
                                 })}
                             >
